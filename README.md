@@ -26,4 +26,4 @@ Install Azure AI Inference SDK:
 ```pip install azure-ai-inference```
 
  - ### Third:
-Set up the Model. How this is done is shown in the [first Notebook]()
+Set up the Model. How this is done is shown in the [first Notebook](Test_Models.ipynb)
