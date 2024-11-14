@@ -6,6 +6,8 @@ To access the models, a [free Service from Github](https://github.com/marketplac
 
 ***Be aware that there are certain [rate limits](https://docs.github.com/en/github-models/prototyping-with-ai-models#rate-limits) for each model!***
 
+As a first test pdf I3D:bio's Training Material ['WhatIsOMERO.pdf'](https://doi.org/10.5281/zenodo.8323588) (Schmidt, C., Bortolomeazzi, M. et al., 2023) is used.
+
  - ### First:
 Make sure to generate a developer key / personal access token on Github and set it as an environment variable. You can generate the token via the [Github website](github.com) under user settings and afterwards set it like this for your current session:
 
