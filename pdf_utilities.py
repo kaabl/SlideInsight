@@ -1,10 +1,3 @@
-from pdf2image import convert_from_path
-from PIL import Image
-import os
-import json
-import pdfplumber
-
-
 def load_pdf(pdf_name):
     """
     Load pdf and convert it to a list of its pages as images.
@@ -19,7 +12,8 @@ def load_pdf(pdf_name):
     slides: list
         List of Images 
     """
-    
+    from pdf2image import convert_from_path
+
     slides = convert_from_path(pdf_name)
     return slides
 
@@ -44,6 +38,8 @@ def save_images(filepath, slides, new_width=None):
     None
         Saves each image in the specified directory as PNG files named slide1.png, slide2.png, etc.
     """
+    from PIL import Image
+    import os
     
     for i, img in enumerate(slides, start=1):
         # Use original width if new_width is not specified
@@ -81,6 +77,9 @@ def text_extraction(pdf_name, images):
         Saves a dictionary mapping slide image file names (e.g., slide1.png) to the extracted text
         in a JSON file named 'dict_slides_text.json'.
     """
+    import json
+    import pdfplumber
+
 
     slide_texts = []
 
