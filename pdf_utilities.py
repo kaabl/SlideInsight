@@ -1,6 +1,9 @@
 from pdf2image import convert_from_path
 from PIL import Image
 import os
+import json
+import pdfplumber
+
 
 def load_pdf(pdf_name):
     """
@@ -60,4 +63,45 @@ def save_images(filepath, slides, new_width=None):
         # Saving the image in the specified filepath
         image_filename = os.path.join(filepath, f"slide{i}.png")
         img_resized.save(image_filename, "PNG")
+
+def text_extraction(pdf_name, images):
+    """
+    Extract text from a PDF and pair it with corresponding slide images, saving the result as a JSON file.
+    
+    Parameters
+    ----------
+    pdf_name : str
+        The name or path of the PDF file from which to extract text.
+    images : list
+        A list of images corresponding to the slides in the PDF.
+    
+    Returns
+    -------
+    None
+        Saves a dictionary mapping slide image file names (e.g., slide1.png) to the extracted text
+        in a JSON file named 'dict_slides_text.json'.
+    """
+
+    slide_texts = []
+
+    # Extract the original text from each Slide
+    with pdfplumber.open(pdf_name) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            slide_texts.append(text)
+            
+    slide_dict = {}
+    for i, (img, text) in enumerate(zip(images, slide_texts), start=1):
+        # Define the path for each image file
+        image_path = f"slide{i}.png"
         
+        # Add the image path and corresponding text to the dictionary
+        slide_dict[image_path] = text
+    
+    # Save the dictionary to a JSON file
+    with open("dict_slides_text.json", "w") as json_file:
+        json.dump(slide_dict, json_file)
+
+
+
+
