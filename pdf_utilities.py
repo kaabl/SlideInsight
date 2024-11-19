@@ -60,6 +60,7 @@ def save_images(filepath, slides, new_width=None):
         image_filename = os.path.join(filepath, f"slide{i}.png")
         img_resized.save(image_filename, "PNG")
 
+
 def text_extraction(pdf_name, images):
     """
     Extract text from a PDF and pair it with corresponding slide images, saving the result as a JSON file.
@@ -73,8 +74,9 @@ def text_extraction(pdf_name, images):
     
     Returns
     -------
-    None
-        Saves a dictionary mapping slide image file names (e.g., slide1.png) to the extracted text
+    slide_texts: list
+        A list of texts corresponding to the slides in the PDF.
+        Also saves a dictionary mapping slide image file names (e.g., slide1.png) to the extracted text
         in a JSON file named 'dict_slides_text.json'.
     """
     import json
@@ -100,6 +102,21 @@ def text_extraction(pdf_name, images):
     # Save the dictionary to a JSON file
     with open(f"dict_{pdf_name}.json", "w") as json_file:
         json.dump(slide_dict, json_file)
+
+    return slide_texts
+
+
+def text_embedding(text
+
+
+
+
+
+
+
+
+
+
 
 
 
