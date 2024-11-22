@@ -123,7 +123,8 @@ def text_extraction(pdf_name, images):
     with open(json_file_path, "w") as json_file:
         json.dump(slide_dict, json_file, indent=4)
 
-
+        
+    
 
 
     
