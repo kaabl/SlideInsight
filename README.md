@@ -1,6 +1,6 @@
 ## Slide Insight
 
-This repository contains a collection of notebooks for gaining insights into presentation slides through multimodal AI models. The goal is to compare different models and how they perform on summarizing the content of presentation slides. This is not implemented through text-to-text models but rather through image-to-text (multimodal) models. 
+This repository contains a collection of notebooks for gaining insights into presentation slides through multimodal AI models. The goal is to [compare different models](Test_Models.ipynb) and how they perform on summarizing the content of presentation slides. This is not implemented through text-to-text models but rather through image-to-text (multimodal) models. Another goal is to establish a workflow that is capable of [grouping Slides](Text_Embedding.ipynb) from multiple presentations together based on their representation as a word embedding. This helps to gather all available information concerning one specific topic.
 
 To access the models, a [free Service from Github](https://github.com/marketplace/models) is used.
 
