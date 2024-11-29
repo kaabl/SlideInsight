@@ -42,6 +42,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install git-bob==0.4.0
         pip install -r requirements.txt
+        pip install azure-ai-inference
         
 
     - name: Run git-bob
