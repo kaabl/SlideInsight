@@ -70,27 +70,27 @@ def save_images(filepath, pdf, new_width=None):
         img_resized.save(image_filename, "PNG")
 
 
-def text_extraction(pdf_name, images):
+def text_extraction(pdf_name, images, slide_dict):
     """
-    Extract text from a PDF and pair it with corresponding slide images, saving the result as a YAML file.
-    If the YAML file already exists, it extends it with new text-image pairs.   
-    
+    Extract text from a PDF and pair it with corresponding slide images, updating the given dictionary
+    and saving the result as a YAML file.
+
     Parameters
     ----------
     pdf_name : str
         The name or path of the PDF file from which to extract text.
     images : list
         A list of images corresponding to the slides in the PDF.
-    
+    slide_dict : dict
+        A dictionary mapping slide image file names to the extracted text.
+
     Returns
     -------
-    None
-        Saves a dictionary mapping slide image file names (e.g., slide1.png) to the extracted text
-        in a YAML file named 'dict_slides_text.yml'.
+    dict
+        The updated slide_dict containing the new text-image pairs.
     """
     import yaml
     import pdfplumber
-    import os
     import re
 
     slide_texts = []
@@ -98,20 +98,13 @@ def text_extraction(pdf_name, images):
     # Removing the .pdf end in the PDF filename:
     pdf_new = re.sub(r'\.pdf$', '', pdf_name, flags=re.IGNORECASE)
 
-    # Extract the original text from each Slide
+    # Extract the original text from each slide
     with pdfplumber.open(pdf_name) as pdf:
         for page in pdf.pages:
             text = page.extract_text()
             slide_texts.append(text)
 
-    yaml_file_path = "dict_slides_text.yml"
-    slide_dict = {}
-
-    # Load existing dictionary if it exists
-    if os.path.exists(yaml_file_path):
-        with open(yaml_file_path, "r") as yaml_file:
-            slide_dict = yaml.safe_load(yaml_file) or {}
-    
+    # Update the dictionary with new text-image pairs
     for i, (img, text) in enumerate(zip(images, slide_texts), start=1):
         # Define the path for each image file
         image_path = f"{pdf_new}_slide{i}.png"
@@ -119,10 +112,9 @@ def text_extraction(pdf_name, images):
         # Add the image path and corresponding text to the dictionary only if it doesn't already exist
         if image_path not in slide_dict:
             slide_dict[image_path] = text
-    
-    # Save the dictionary to a YAML file
-    with open(yaml_file_path, "w") as yaml_file:
-        yaml.dump(slide_dict, yaml_file, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+    return slide_dict
+
 
 
         
@@ -173,7 +165,8 @@ def text_extract_from_pdfs(downloads_folder="downloads", yaml_file_path="dict_sl
         image_list.sort()
 
         # Check if these slides are already in the dictionary
-        if any(key.startswith(pdf_name) for key in slide_dict):
+        processed_slides = [key for key in slide_dict if pdf_name in key]
+        if processed_slides:
             print(f"Slides for {pdf_name} already processed. Skipping.")
             continue
 
@@ -186,27 +179,13 @@ def text_extract_from_pdfs(downloads_folder="downloads", yaml_file_path="dict_sl
         # Process and extract text
         try:
             print(f"Processing slides for {pdf_name}...")
-            text_extraction(pdf_path, image_list)
+            slide_dict = text_extraction(pdf_path, image_list, slide_dict)
         except Exception as e:
             print(f"Error processing slides for {pdf_name}: {e}")
 
     # Save the updated dictionary to the YAML file
     with open(yaml_file_path, "w") as yaml_file:
         yaml.dump(slide_dict, yaml_file, default_flow_style=False, allow_unicode=True, sort_keys=False)
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
 
 
 
