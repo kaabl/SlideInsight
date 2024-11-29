@@ -61,8 +61,9 @@ def save_images(filepath, pdf, new_width=None):
         # Ensure filepath directory exists
         os.makedirs(filepath, exist_ok=True)
 
-        # Removing the .pdf end in the PDF filename:
-        pdf_new = re.sub(r'\.pdf$', '', pdf, flags=re.IGNORECASE)
+        # Extract the filename without directory and extension
+        pdf_name = os.path.basename(pdf)
+        pdf_new = re.sub(r'\.pdf$', '', pdf_name, flags=re.IGNORECASE)
 
         # Saving the image in the specified filepath
         image_filename = os.path.join(filepath, f"{pdf_new}_slide{i}.png")
@@ -71,8 +72,8 @@ def save_images(filepath, pdf, new_width=None):
 
 def text_extraction(pdf_name, images):
     """
-    Extract text from a PDF and pair it with corresponding slide images, saving the result as a JSON file.
-    If the JSON file already exists, it extends it with new text-image pairs.   
+    Extract text from a PDF and pair it with corresponding slide images, saving the result as a YAML file.
+    If the YAML file already exists, it extends it with new text-image pairs.   
     
     Parameters
     ----------
@@ -85,9 +86,9 @@ def text_extraction(pdf_name, images):
     -------
     None
         Saves a dictionary mapping slide image file names (e.g., slide1.png) to the extracted text
-        in a JSON file named 'dict_slides_text.json'.
+        in a YAML file named 'dict_slides_text.yml'.
     """
-    import json
+    import yaml
     import pdfplumber
     import os
     import re
@@ -103,13 +104,13 @@ def text_extraction(pdf_name, images):
             text = page.extract_text()
             slide_texts.append(text)
 
-    json_file_path = "dict_slides_text.json"
+    yaml_file_path = "dict_slides_text.yml"
     slide_dict = {}
 
     # Load existing dictionary if it exists
-    if os.path.exists(json_file_path):
-        with open(json_file_path, "r") as json_file:
-            slide_dict = json.load(json_file)
+    if os.path.exists(yaml_file_path):
+        with open(yaml_file_path, "r") as yaml_file:
+            slide_dict = yaml.safe_load(yaml_file) or {}
     
     for i, (img, text) in enumerate(zip(images, slide_texts), start=1):
         # Define the path for each image file
@@ -119,9 +120,10 @@ def text_extraction(pdf_name, images):
         if image_path not in slide_dict:
             slide_dict[image_path] = text
     
-    # Save the dictionary to a JSON file
-    with open(json_file_path, "w") as json_file:
-        json.dump(slide_dict, json_file, indent=4)
+    # Save the dictionary to a YAML file
+    with open(yaml_file_path, "w") as yaml_file:
+        yaml.dump(slide_dict, yaml_file, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
 
         
     
