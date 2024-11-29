@@ -1,0 +1,193 @@
+WhatIsOMERO_slide1.png: 'I3D:bio OMERO user training slides
+
+  HOW TO USE THE SLIDE TEMPLATES
+
+  • To use your institution‘s slide design and logo, adjust the slides of this presentation
+
+  using the „slide master“
+
+  Note that these slides are optimized for 16:9 screen presentation layout
+
+  • Check the slides for yellow-marked text and insert the information according to
+  your
+
+  own institute‘s infrastructure.
+
+  • Feel free to use this material for videos, teaching, guidelines, etc., at your
+  institute
+
+  • Please cite us (e.g., on page 1) when re-using this material or derivatives of
+  it:
+
+  Adaptedfrom: Schmidt C., Bortolomeazzi M., Boissonnet T., Fortmann-Grote C. et al.
+  (2023). I3D:bio‘s OMERO training material: Re-usable, adjustable, multi-purpose
+  slides for
+
+  local user training. Zenodo.DOI: 10.5281/zenodo.8323588. Ifnot statedotherwise,
+  thecontentof thismaterial (exceptforlogosand theslidedesign) ispublishedunderCreative
+
+  Commons Attribution 4.0 license.
+
+  • If not stated otherwise, the content of this material (except for logos) is published
+
+  under a Creative Commons Attribution 4.0 license.
+
+  • This work is funded by the Deutsche Forschungsgemeinschaft (DFG, German
+
+  Research Foundation) – 462231789 (Information Infrastructure for BioImage Data,
+
+  I3D:bio)'
+WhatIsOMERO_slide2.png: 'Disclaimer
+
+  • The following slides are intended for reuse after
+
+  substituting yellow-marked text with the relevant Information Infrastructure
+
+  forBioImageData
+
+  information at your institute. https://www.i3dbio.de
+
+  • Some content may not apply to the specific setup
+
+  of the OMERO installation at your institute.
+
+  The content reflects solely the authors’ opinions and
+
+  does not speak on behalf of the original software, its
+
+  FundedbytheDeutsche
+
+  developers, or other cited community resources. Forschungsgemeinschaft
+
+  (DFG, German Research
+
+  Foundation), projectI3D:bio,
+
+  grantnumber462231789
+
+  Adaptedfrom: Schmidt C., Bortolomeazzi M., Boissonnet T., Fortmann-Grote C. et al.
+  (2023). I3D:bio‘s OMERO training
+
+  material: Re-usable, adjustable, multi-purpose slides for local user training. Zenodo.DOI:
+  10.5281/zenodo.8323588
+
+  Ifnot statedotherwise, thecontentof thismaterial (exceptforlogosand theslidedesign)
+  ispublishedunderCreative
+
+  Commons Attribution 4.0 license.'
+WhatIsOMERO_slide3.png: 'Research Data Management for Bioimage Data
+
+  at the ADD INSTITUTE HERE
+
+  What is the image data
+
+  management platform OMERO?
+
+  ADD AUTHOR / RESPONSIBLE PERSON FROM YOUR INSTITUE
+
+  Information Infrastructure
+
+  forBioImageData
+
+  Adaptedfrom: Schmidt C., Bortolomeazzi M., Boissonnet T., Fortmann-Grote C. et al.
+  (2023). I3D:bio‘s OMERO training ADD LOGO
+
+  material: Re-usable, adjustable, multi-purpose slides for local user training. Zenodo.DOI:
+  10.5281/zenodo.8323588
+
+  Ifnot statedotherwise, thecontentof thismaterial (exceptforlogosand theslidedesign)
+  ispublishedundera Creative BIG
+
+  Commons Attribution 4.0 license.'
+WhatIsOMERO_slide4.png: 'OMERO: An open-source software for image data management
+
+  OMERO = „OME Remote Objects“
+
+  Created by the Open Microscopy Environment Consortium (OME)
+
+  • User computer
+
+  • Microscope computer
+
+  • Processing / analysis server
+
+  • Installed on an institute or central IT server
+
+  • Storage and handling of imaging data
+
+  • Accessible from outside via „clients“
+
+  p 4 ADD LOGO SMALL
+
+  Adaptedfromhttps://docs.openmicroscopy.org/omero/5.6.3/users/index.html'
+WhatIsOMERO_slide5.png: 'From isolated data silos…
+
+  p 5 ADD LOGO SMALL'
+WhatIsOMERO_slide6.png: '… to centralized, structured data management
+
+  p 6 ADD LOGO SMALL'
+WhatIsOMERO_slide7.png: 'OMERO at the ADD INSTITUTE HERE
+
+  Service provided for researchers centrally by the IT DEPARTMENT / CORE FACILITY
+
+  Get your account & log in with your user credentials (USER CREDENTIAL TYPE)
+
+  web access: WEB-ADDRESS OF OMERO
+
+  WEB
+
+  Use OMERO
+
+  Enter your user name
+
+  & password
+
+  • for yourself
+
+  • with your group
+
+  • with collaboration partners
+
+  • from the intranet or via a
+
+  virtual private network (VPN)
+
+  p 7 ADD LOGO SMALL'
+WhatIsOMERO_slide8.png: 'Advantages of using OMERO
+
+  • Organize your original image files in a central storage location
+
+  • Unique IDs for images; data can be linked via IDs
+
+  • View your images, add annotations, tags, and comments to your images
+
+  • View & explore images, and adjust, save and share visualization settings
+
+  • Create publication-ready figures connected to original image files
+
+  • Export image data to different formats
+
+  • Analyze image data
+
+  • Built-in analysis functions
+
+  • Connect to popular image analysis software like Fiji or QuPath
+
+  • Share your data with colleagues
+
+  • and more…
+
+  p 8 ADD LOGO SMALL'
+WhatIsOMERO_slide9.png: 'Contact
+
+  Please review the additional information material available on the website:
+
+  ADD YOUR WEBSITE HERE
+
+  Contact:
+
+  • PERSON@YOURINSTITUTE.de (OMERO administrator)
+
+  • PERSON@YOURINSTITUTE.de (Light Microscopy Core Facility)
+
+  p 9 ADD LOGO SMALL'
