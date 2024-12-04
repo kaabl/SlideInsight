@@ -126,78 +126,7 @@ def text_extraction(pdf_name, images, slide_dict=None):
 
 
 
-        
-    
 def text_extract_from_pdfs(downloads_folder="downloads", yaml_file_path="dict_slides_text.yml"):
-    """
-    Extract text from PDFs based on their corresponding slide images and save the text-image pairs in a YAML file.
-    Skips PDFs whose slides are already processed and stored in the YAML file.
-
-    Parameters
-    ----------
-    downloads_folder : str, optional
-        The path to the folder containing the PDF files and the 'images' subfolder (default is "downloads").
-    yaml_file_path : str, optional
-        The path to the YAML file where text-image pairs will be stored (default is "dict_slides_text.yml").
-
-    Returns
-    -------
-    None
-    """
-    import os
-    import yaml
-    import re
-
-    # Define paths
-    images_folder = os.path.join(downloads_folder, "images")
-
-    # Ensure the YAML dictionary exists or initialize an empty one
-    if os.path.exists(yaml_file_path):
-        with open(yaml_file_path, "r") as yaml_file:
-            slide_dict = yaml.safe_load(yaml_file) or {}
-    else:
-        slide_dict = {}
-
-    # Group images by their corresponding PDFs
-    pdf_image_map = {}
-    for image_file in os.listdir(images_folder):
-        if image_file.lower().endswith('.png'):
-            # Extract the base PDF name from the image filename (e.g., `example_slide1.png` -> `example`)
-            match = re.match(r"(.+)_slide\d+\.png", image_file)
-            if match:
-                pdf_name = match.group(1)
-                pdf_image_map.setdefault(pdf_name, []).append(os.path.join(images_folder, image_file))
-
-    # Process each group of images
-    for pdf_name, image_list in pdf_image_map.items():
-        # Sort the images to ensure slide order
-        image_list.sort()
-
-        # Check if these slides are already in the dictionary
-        processed_slides = [key for key in slide_dict if pdf_name in key]
-        if processed_slides:
-            print(f"Slides for {pdf_name} already processed. Skipping.")
-            continue
-
-        # Construct the PDF file path
-        pdf_path = os.path.join(downloads_folder, f"{pdf_name}.pdf")
-        if not os.path.exists(pdf_path):
-            print(f"PDF file {pdf_path} corresponding to the images not found. Skipping.")
-            continue
-
-        # Process and extract text
-        try:
-            print(f"Processing slides for {pdf_name}...")
-            slide_dict = text_extraction(pdf_path, image_list, slide_dict)
-        except Exception as e:
-            print(f"Error processing slides for {pdf_name}: {e}")
-
-    # Save the updated dictionary to the YAML file
-    with open(yaml_file_path, "w") as yaml_file:
-        yaml.dump(slide_dict, yaml_file, default_flow_style=False, allow_unicode=True, sort_keys=False)
-
-
-def text_extract_from_pdfs_2(downloads_folder="downloads", yaml_file_path="dict_slides_text.yml"):
     """
     Extract text from PDFs based on their corresponding slide images and save the text-image pairs in a YAML file.
     Processes PDFs and images in sorted order. Skips PDFs whose slides are already processed and stored in the YAML file.
@@ -216,6 +145,7 @@ def text_extract_from_pdfs_2(downloads_folder="downloads", yaml_file_path="dict_
     import os
     import yaml
     import re
+    from natsort import natsorted
 
     # Define paths
     images_folder = os.path.join(downloads_folder, "images")
@@ -238,7 +168,7 @@ def text_extract_from_pdfs_2(downloads_folder="downloads", yaml_file_path="dict_
                 pdf_image_map.setdefault(pdf_name, []).append(os.path.join(images_folder, image_file))
 
     # Sort the PDFs alphabetically and their corresponding images
-    sorted_pdf_image_map = {pdf_name: sorted(images) for pdf_name, images in sorted(pdf_image_map.items())}
+    sorted_pdf_image_map = {pdf_name: natsorted(images) for pdf_name, images in natsorted(pdf_image_map.items())}
 
     # Process each group of images
     for pdf_name, image_list in sorted_pdf_image_map.items():
