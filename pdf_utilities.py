@@ -197,3 +197,190 @@ def text_extract_from_pdfs(downloads_folder="downloads", yaml_file_path="dict_sl
 
 
 
+def get_mixed_embedding(client, image_path, text_model):
+    """
+    Generates a structured description of an image using GPT-4o.
+
+    Parameters
+    ----------
+    client : ChatCompletionsClient
+        The GPT-4o client.
+    image_path : str
+        Path to the image.
+    text_model: str
+
+    Returns
+    -------
+    mixed_embedding:
+        Text Embedding of the models anwser. 
+    """
+    from azure.ai.inference import ChatCompletionsClient
+    from azure.ai.inference.models import (
+                SystemMessage,
+                UserMessage,
+                TextContentItem,
+                ImageContentItem,
+                ImageUrl,
+                ImageDetailLevel,
+            )
+    from azure.core.credentials import AzureKeyCredential 
+    import os
+    from PIL import Image
+
+        
+    endpoint = "https://models.inference.ai.azure.com"
+    token = os.environ["GITHUB_TOKEN"]
+    client = ChatCompletionsClient(
+            endpoint=endpoint,
+            credential=AzureKeyCredential(token),
+        )
+
+    response = client.complete(
+        messages=[
+            SystemMessage(
+                content="You are a professional Data Scientist. Provide a structured description of the image in 1-2 sentences."
+            ),
+            UserMessage(
+                content=[
+                    ImageContentItem(
+                        image_url=ImageUrl.load(
+                            image_file=image_path,
+                            image_format="png",
+                            detail=ImageDetailLevel.LOW
+                        )
+                    ),
+                ],
+            ),
+        ],
+        model="gpt-4o",
+    )
+
+    # Parse structured description from response
+    structured_response = response.choices[0].message.content
+    
+    # Convert the textual response into an embedding
+    mixed_embedding = text_model.encode(structured_response)
+
+    return mixed_embedding
+
+
+
+def calculate_text_embeddings(pdf_name, text_model):
+    """
+    Extracts text from each page of a PDF and computes text embeddings.
+
+    Parameters
+    ----------
+    pdf_name : str
+        The path to the PDF file from which text needs to be extracted.
+    text_model: str
+        Name of the text embedding model.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys are page numbers (int) and values are text embeddings (array-like),
+        representing the encoded textual content of each page.
+    """
+    import pdfplumber
+    
+    text_embeddings = {}
+    with pdfplumber.open(pdf_name) as pdf:
+        for page_number, page in enumerate(pdf.pages):
+            text = page.extract_text() or ""  # Handle empty pages gracefully
+            text_embeddings[page_number] = text_model.encode(text)
+    return text_embeddings
+
+
+def process_slides(slides, client, clip_processor, clip_model, text_model):
+    """
+    Processes PDF slides to compute visual and mixed-modal embeddings.
+
+    Parameters
+    ----------
+    slides : list
+        List of images representing the slides.
+    client : object
+        The initialized client for mixed-modal embedding (GitHub Marketplace ChatGPT 4o).
+    clip_processor: str
+    clip_model: str
+    text_model: str
+
+    Returns
+    -------
+    list
+        A list of dictionaries containing embeddings and slide numbers.
+    """
+    import torch
+    import os
+    from PIL import Image
+    from transformers import CLIPProcessor, CLIPModel
+    from azure.ai.inference import ChatCompletionsClient
+    from azure.ai.inference.models import (
+            SystemMessage,
+            UserMessage,
+            TextContentItem,
+            ImageContentItem,
+            ImageUrl,
+            ImageDetailLevel,
+        )
+    from azure.core.credentials import AzureKeyCredential 
+    
+    
+    endpoint = "https://models.inference.ai.azure.com"
+    token = os.environ["GITHUB_TOKEN"]
+    client = ChatCompletionsClient(
+        endpoint=endpoint,
+        credential=AzureKeyCredential(token),
+    )
+
+    
+    slide_embeddings = []
+    for slide_number, slide_image in enumerate(slides):
+        # Save slide image temporarily
+        image_path = f"images/slide_{slide_number}.png"
+        slide_image.save(image_path)
+        
+        # Generate visual embedding using CLIP
+        inputs = clip_processor(images=slide_image, return_tensors="pt")
+        with torch.no_grad():
+            visual_embedding = clip_model.get_image_features(**inputs).squeeze().tolist()
+        
+        # Generate 'mixed-modal' embedding using GPT-4o
+        try:
+            mixed_embedding = get_mixed_embedding(client, image_path, text_model)
+        except Exception as e:
+            print(f"Error generating GPT-4o embedding for slide {slide_number}: {e}")
+            mixed_embedding = None
+        
+        # Append embeddings
+        slide_embeddings.append({
+            "slide_number": slide_number,
+            "visual_embedding": visual_embedding,
+            "mixed_modal_embedding": mixed_embedding,
+        })
+    return slide_embeddings
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
