@@ -21,11 +21,6 @@ Make sure to generate a developer key / personal access token on Github and set 
 ##### Windows command prompt:
 ```set GITHUB_TOKEN= your-github-token-goes-here```
 
+
  - ### Second:
-
-Install Azure AI Inference SDK:
-
-```pip install azure-ai-inference```
-
- - ### Third:
 Set up the Model. How this is done is shown in the [first Notebook](Test_Models.ipynb)
