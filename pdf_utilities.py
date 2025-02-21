@@ -1,3 +1,35 @@
+from datasets import Dataset, Features, Value, Sequence
+from datasets import load_dataset
+from huggingface_hub import create_repo, login, HfApi
+from sentence_transformers import SentenceTransformer
+from transformers import CLIPProcessor, CLIPModel
+import pdfplumber
+import torch
+import os
+import shelve
+
+
+# Initialize models
+text_model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
+clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+
+# Embedding functions
+def embed_text(pdf_filename, slide_number, text_model):
+    with pdfplumber.open(pdf_filename) as pdf:
+        text = pdf.pages[slide_number - 1].extract_text() or ""
+        return text_model.encode(text)
+
+
+def embed_visual(pdf_filename, slide_number, clip_processor, clip_model):
+    with pdfplumber.open(pdf_filename) as pdf:
+        image = pdf.pages[slide_number - 1].to_image().original
+        inputs = clip_processor(images=image, return_tensors="pt")
+        with torch.no_grad():
+            return clip_model.get_image_features(**inputs).squeeze().tolist()
+
+
 def load_pdf(pdf_name):
     """
     Load pdf and convert it to a list of its pages as images.
@@ -61,12 +93,8 @@ def save_images(filepath, pdf, new_width=None):
         # Ensure filepath directory exists
         os.makedirs(filepath, exist_ok=True)
 
-        # Extract the filename without directory and extension
-        pdf_name = os.path.basename(pdf)
-        pdf_new = re.sub(r'\.pdf$', '', pdf_name, flags=re.IGNORECASE)
-
         # Saving the image in the specified filepath
-        image_filename = os.path.join(filepath, f"{pdf_new}_slide{i}.png")
+        image_filename = os.path.join(filepath, f"{pdf}_slide{i}.png")
         img_resized.save(image_filename, "PNG")
 
 
@@ -100,9 +128,6 @@ def text_extraction(pdf_name, images, slide_dict=None):
 
     slide_texts = []
 
-    # Removing the .pdf end in the PDF filename:
-    pdf_new = re.sub(r'\.pdf$', '', pdf_name, flags=re.IGNORECASE)
-
     # Extract the original text from each slide
     with pdfplumber.open(pdf_name) as pdf:
         for page in pdf.pages:
@@ -112,7 +137,7 @@ def text_extraction(pdf_name, images, slide_dict=None):
     # Update the dictionary with new text-image pairs
     for i, (img, text) in enumerate(zip(images, slide_texts), start=1):
         # Define the path for each image file
-        image_path = f"{pdf_new}_slide{i}.png"
+        image_path = f"{pdf_name}_slide{i}.png"
 
         # Add the image path and corresponding text to the dictionary only if it doesn't already exist
         if image_path not in slide_dict:
@@ -264,17 +289,19 @@ def get_mixed_embedding(client, image_path, text_model):
     return mixed_embedding
 
 
-
-def calculate_text_embeddings(pdf_name, text_model):
+def calculate_text_embeddings(pdf_name, text_model, repo_name="lea-33/SlightInsight_Cache"):
     """
-    Extracts text from each page of a PDF and computes text embeddings.
+    Extracts text from each page of a PDF, computes text embeddings if not cached,
+    and stores them in the Hugging Face cache.
 
     Parameters
     ----------
     pdf_name : str
         The path to the PDF file from which text needs to be extracted.
-    text_model: str
-        Name of the text embedding model.
+    text_model: SentenceTransformer
+        Text embedding model instance.
+    repo_name: str, optional
+        Name of the Hugging Face Hub repository for caching.
 
     Returns
     -------
@@ -282,51 +309,93 @@ def calculate_text_embeddings(pdf_name, text_model):
         A dictionary where keys are page numbers (int) and values are text embeddings (array-like),
         representing the encoded textual content of each page.
     """
+    from datasets import load_dataset
     import pdfplumber
-    
+
+    # Ensure the repository exists or create a new one
+    full_repo_name = ensure_repo_exists(repo_name)
+
+    # Load or initialize the dataset
+    cache_dataset = load_cache_dataset(full_repo_name)
+    cached_keys = set(cache_dataset["key"]) if "key" in cache_dataset.column_names else set()
+
+    # Prepare to store results
     text_embeddings = {}
+
     with pdfplumber.open(pdf_name) as pdf:
         for page_number, page in enumerate(pdf.pages):
-            text = page.extract_text() or ""  # Handle empty pages gracefully
-            text_embeddings[page_number] = text_model.encode(text)
+            key = f"{pdf_name}_page{page_number}"
+
+            # Check if the text embedding is already in the cache
+            if key in cached_keys:
+                cached_value = cache_dataset.filter(lambda x: x["key"] == key)["value"][0]
+
+                if "text_embedding" in cached_value and cached_value["text_embedding"]:
+                    text_embeddings[page_number] = cached_value["text_embedding"]
+                    continue
+
+            # If not cached, compute the embedding
+            text = page.extract_text() or ""  # Handle empty pages 
+            text_embedding = text_model.encode(text)
+            text_embeddings[page_number] = text_embedding
+
+            # Add the new embedding to the cache
+            new_entry = {
+                "key": key,
+                "value": {
+                    "text_embedding": text_embedding
+                }
+            }
+            cache_dataset = cache_dataset.add_item(new_entry)
+
+    # Push the updated cache dataset to Hugging Face Hub
+    cache_dataset.push_to_hub(full_repo_name)
+
     return text_embeddings
 
 
-def process_slides(slides, client, clip_processor, clip_model, text_model):
+
+def process_slides(pdf_path, slides, client, clip_processor, clip_model, text_model, repo_name="lea-33/SlightInsight_Cache"):
     """
-    Processes PDF slides to compute visual and mixed-modal embeddings.
+    Processes PDF slides to compute visual and mixed-modal embeddings, caching results on Hugging Face.
 
     Parameters
     ----------
+    pdf_path: str
+        Name of the PDF file.
     slides : list
         List of images representing the slides.
-    client : object
-        The initialized client for mixed-modal embedding (GitHub Marketplace ChatGPT 4o).
-    clip_processor: str
-    clip_model: str
-    text_model: str
+    clip_processor: CLIPProcessor
+        The processor for the CLIP model.
+    clip_model: CLIPModel
+        The CLIP model for generating visual embeddings.
+    text_model: SentenceTransformer
+        The text embedding model.
+    repo_name: str, optional
+        Name of the Hugging Face Hub repository for caching.
 
     Returns
     -------
     list
-        A list of dictionaries containing embeddings and slide numbers.
+        A list of dictionaries containing embeddings and slide numbers for all slides.
     """
     import torch
     import os
+    from huggingface_hub import HfApi
+    from datasets import Dataset
     from PIL import Image
     from transformers import CLIPProcessor, CLIPModel
     from azure.ai.inference import ChatCompletionsClient
     from azure.ai.inference.models import (
-            SystemMessage,
-            UserMessage,
-            TextContentItem,
-            ImageContentItem,
-            ImageUrl,
-            ImageDetailLevel,
-        )
+        SystemMessage,
+        UserMessage,
+        TextContentItem,
+        ImageContentItem,
+        ImageUrl,
+        ImageDetailLevel,
+    )
     from azure.core.credentials import AzureKeyCredential 
-    
-    
+
     endpoint = "https://models.inference.ai.azure.com"
     token = os.environ["GITHUB_TOKEN"]
     client = ChatCompletionsClient(
@@ -334,33 +403,79 @@ def process_slides(slides, client, clip_processor, clip_model, text_model):
         credential=AzureKeyCredential(token),
     )
 
-    
-    slide_embeddings = []
+    # Ensure Hugging Face repository exists
+    full_repo_name = ensure_repo_exists(repo_name)
+
+    # Load or initialize cache dataset
+    cache_dataset = load_cache_dataset(full_repo_name)
+    cached_keys = set(cache_dataset["key"]) if "key" in cache_dataset.column_names else set()
+
+    slide_embeddings = []  # Store all embeddings as a list of dictionaries
+
     for slide_number, slide_image in enumerate(slides):
         # Save slide image temporarily
         image_path = f"images/slide_{slide_number}.png"
         slide_image.save(image_path)
+
+        key = f"{pdf_path}_page{slide_number}"
         
-        # Generate visual embedding using CLIP
-        inputs = clip_processor(images=slide_image, return_tensors="pt")
-        with torch.no_grad():
-            visual_embedding = clip_model.get_image_features(**inputs).squeeze().tolist()
-        
+        vision_embedding, text_embedding, mixed_embedding = None, None, None
+
+        # Check if the key exists in the cache
+        if key in cached_keys:
+            print(f"Fetching cached embeddings for slide {slide_number}.")
+            cached_value = cache_dataset.filter(lambda x: x["key"] == key)["value"][0]
+
+            if (
+                "vision_embedding" in cached_value and cached_value["vision_embedding"] and
+                "text_embedding" in cached_value and cached_value["text_embedding"]
+            ):
+                vision_embedding = cached_value["vision_embedding"]
+                text_embedding = cached_value["text_embedding"]
+            else:
+                print(f"Key found but entry is incomplete. Removing old entry for slide {slide_number}.")
+                cache_dataset = cache_dataset.filter(lambda x: x["key"] != key)
+
+        # Compute embeddings if the entry does not exist or was removed
+        if vision_embedding is None or text_embedding is None:
+            print(f"Computing embeddings for slide {slide_number}.")
+            inputs = clip_processor(images=slide_image, return_tensors="pt")
+            with torch.no_grad():
+                vision_embedding = clip_model.get_image_features(**inputs).squeeze().tolist()
+
+            text_embedding = calculate_text_embeddings(pdf_path, text_model).get(slide_number, [])
+
+            # Cache the new entry
+            new_entry = {
+                "key": key,
+                "value": {
+                    "vision_embedding": vision_embedding,
+                    "text_embedding": text_embedding
+                }
+            }
+            cache_dataset = cache_dataset.add_item(new_entry)
+            print(f"Cached embeddings for slide {slide_number}.")
+
         # Generate 'mixed-modal' embedding using GPT-4o
         try:
             mixed_embedding = get_mixed_embedding(client, image_path, text_model)
         except Exception as e:
             print(f"Error generating GPT-4o embedding for slide {slide_number}: {e}")
             mixed_embedding = None
-        
-        # Append embeddings
+
+        # Add all embeddings for this slide to the main list
         slide_embeddings.append({
             "slide_number": slide_number,
-            "visual_embedding": visual_embedding,
-            "mixed_modal_embedding": mixed_embedding,
+            "vision_embedding": vision_embedding,
+            "text_embedding": text_embedding,
+            "mixed_modal_embedding": mixed_embedding
         })
-    return slide_embeddings
 
+    # Push the updated cache dataset to Hugging Face Hub
+    cache_dataset.push_to_hub(full_repo_name)
+    print(f"Finished caching embeddings for all slides.")
+
+    return slide_embeddings
 
 
 
