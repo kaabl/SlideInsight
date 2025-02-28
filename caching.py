@@ -27,6 +27,7 @@ import pdfplumber
 from io import BytesIO
 import yaml
 import re
+from pdf2image import convert_from_bytes
 
 
 # Initialize models
@@ -81,7 +82,7 @@ def embed_visual(pdf_filename, slide_number, clip_processor, clip_model):
             return clip_model.get_image_features(**inputs).squeeze().tolist()
 
 
-def embed_mixed(image, text_model):
+def embed_mixed(image, text_model, token, use_openai):
     """
     Generates an embedding of a structured description of an image using GPT-4o.
 
@@ -89,6 +90,8 @@ def embed_mixed(image, text_model):
     ----------
     image : PIL.Image
     text_model: str
+    token: str
+    use_openai: bool
 
     Returns
     -------
@@ -97,11 +100,7 @@ def embed_mixed(image, text_model):
     """
  
     endpoint = "https://models.inference.ai.azure.com"
-    token = os.environ["GITHUB_TOKEN"]
-    client = ChatCompletionsClient(
-            endpoint=endpoint,
-            credential=AzureKeyCredential(token),
-        )
+    token = token
     
     # Convert PIL image to byte stream
     img_byte_arr = io.BytesIO()
@@ -110,23 +109,38 @@ def embed_mixed(image, text_model):
     img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode("utf-8")
     image_data_uri = f"data:image/png;base64,{img_base64}"
     
-    response = client.complete(
-        messages=[
-            SystemMessage(
-                content="You are a professional Data Scientist. Provide a structured description of the image in 1-2 sentences. Focus on what you can see in the image."
-            ),
-            UserMessage(
-                content=[
-                    ImageContentItem(
-                        image_url=ImageUrl(url=image_data_uri, detail=ImageDetailLevel.LOW)
-                    ),
-                ],
-            ),
-        ],
-        model="gpt-4o",
-    )
+    if use_openai:
+        from openai import OpenAI
+        
+        client = OpenAI(api_key = token) 
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a professional Data Scientist. Provide a structured description of the image in 1-2 sentences. Focus on what you can see in the image."},
+                {"role": "user", "content": [{"type": "image_url", "image_url": image_data_uri}]}
+            ]
+        )
+        
+    else:
+        client = ChatCompletionsClient(endpoint=endpoint,credential=AzureKeyCredential(token))
     
-    
+        response = client.complete(
+            messages=[
+                SystemMessage(
+                    content="You are a professional Data Scientist. Provide a structured description of the image in 1-2 sentences. Focus on what you can see in the image."
+                ),
+                UserMessage(
+                    content=[
+                        ImageContentItem(
+                            image_url=ImageUrl(url=image_data_uri, detail=ImageDetailLevel.LOW)
+                        ),
+                    ],
+                ),
+            ],
+            model="gpt-4o",
+        )
+        
     # Parse structured description from response
     structured_response = response.choices[0].message.content
     
@@ -346,7 +360,7 @@ def get_zenodo_ids_from_yaml(yaml_file):
                 zenodo_ids.extend(extract_zenodo_ids(entry["url"]))  # Extract IDs safely
     sorted_ids = sorted(zenodo_ids)
    
-    return sorted_ids 
+    return sorted_ids
     
 # Function to fetch Zenodo record files (PDFs)
 def get_zenodo_pdfs(record_id):
@@ -376,7 +390,7 @@ def download_pdf(pdf_url):
         return None
 
 # Main function to process each slide and store embeddings with metadata
-def cache_hf(zenodo_record_id, repo_name="your-hf-repo"):
+def cache_hf(zenodo_record_id, token, use_openai, repo_name="your-hf-repo"):
     """
     Processes all PDF slides from a Zenodo record and stores embeddings with metadata.
 
@@ -384,6 +398,10 @@ def cache_hf(zenodo_record_id, repo_name="your-hf-repo"):
     ----------
     zenodo_record_id : str
         Zenodo record ID to fetch PDFs from.
+    token: str
+        Token for OpenAI or GH Models 
+    use_openai: bool
+        if True: uses OpenAI API, otherwise GH Models
     repo_name : str, optional
         Hugging Face dataset repository name.
 
@@ -391,7 +409,7 @@ def cache_hf(zenodo_record_id, repo_name="your-hf-repo"):
     -------
     None
     """
-
+    
     # Ensure the repository exists
     full_repo_name = ensure_repo_exists(repo_name)
     
@@ -437,18 +455,11 @@ def cache_hf(zenodo_record_id, repo_name="your-hf-repo"):
             slide_number = i + 1
             slide_key = f"record{zenodo_record_id}_pdf{pdf_number + 1}_slide{slide_number}"
 
-            print(f"Generating embeddings for Slide {slide_number} of {pdf_filename}...")
-
-            # Dummy embeddings
-            #text_embedding = i
-            #visual_embedding = i
-            #mixed_embedding = i
-            
             text_embedding = embed_text(pdf_bytes, i, text_model)
             visual_embedding = embed_visual(pdf_bytes, i, clip_processor, clip_model)
 
             page_image = slide.to_image().original  # Convert to PIL Image
-            mixed_embedding = embed_mixed(page_image, text_model)
+            mixed_embedding = embed_mixed(page_image, text_model, token, use_openai)
 
             # Store metadata
             new_data.append({
@@ -467,6 +478,8 @@ def cache_hf(zenodo_record_id, repo_name="your-hf-repo"):
     cache_dataset.push_to_hub(repo_name)
 
     print(f"Finished processing Zenodo Record {zenodo_record_id}.")
+
+
 
 
 
