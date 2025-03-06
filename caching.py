@@ -248,9 +248,9 @@ def load_local_cache(pdf_path, slide_number):
             return None
 
 
-def load_hf_cache(record_id, slide_number, pdf_number = 1, repo_name="your-hf-repo"):
+def load_single_hf_cache(record_id, slide_number, pdf_number = 1, repo_name="ScaDS-AI/SlightInsight_Cache"):
     """
-    Loads embeddings and metadata from the Hugging Face cache.
+    Loads embeddings and metadata from the Hugging Face cache for a single slide.
 
     Parameters
     ----------
@@ -300,6 +300,32 @@ def load_hf_cache(record_id, slide_number, pdf_number = 1, repo_name="your-hf-re
     print(f"No cached data found for {key}")
     return None
 
+
+
+def load_full_hf_cache(repo_name="ScaDS-AI/SlightInsight_Cache"):
+    """
+    Loads the entire dataset from the Hugging Face cache.
+
+    Parameters
+    ----------
+    repo_name : str, optional
+        Name of the Hugging Face Hub dataset repository.
+
+    Returns
+    -------
+    pandas.DataFrame or None
+        A DataFrame containing all cached data.
+        Returns None if loading fails.
+    """
+
+    # Load dataset from Hugging Face Hub
+    try:
+        cache_dataset = load_dataset(repo_name, split="train")
+        df = cache_dataset.to_pandas()  
+        return df
+    except Exception as e:
+        print(f"Error loading dataset: {e}")
+        return None
 
 
 
@@ -391,7 +417,7 @@ def download_pdf(pdf_url):
         return None
 
 # Main function to process each slide and store embeddings with metadata
-def cache_hf(zenodo_record_id, token, use_openai, repo_name="your-hf-repo"):
+def cache_hf(zenodo_record_id, token, use_openai, repo_name="ScaDS-AI/SlightInsight_Cache"):
     """
     Processes all PDF slides from a Zenodo record and stores embeddings with metadata.
 
