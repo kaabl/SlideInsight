@@ -2,3 +2,5 @@
 .ipynb_checkpoints
 __pycache__
 dict_slides_text.yml
+nfdi4bioimage.yml
+HUGGINGFACE_README.md
