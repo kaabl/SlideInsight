@@ -7,6 +7,9 @@ import pdfplumber
 import torch
 import os
 import shelve
+import requests
+from tqdm import tqdm
+from caching import load_full_hf_cache, get_zenodo_pdfs
 
 
 # Initialize models
@@ -479,6 +482,55 @@ def process_slides(pdf_path, slides, client, clip_processor, clip_model, text_mo
 
 
 
+
+def download_all_pdfs(repo_name = "ScaDS-AI/SlideInsight_Cache", save_dir="zenodo_pdfs"):
+    """
+    Downloads all unique PDFs listed in a dataframe using Zenodo record metadata.
+
+    Parameters:
+        repo_name (str): Name of the HF Repository that stores information about the PDFs.
+        save_dir (str): Directory where PDFs will be saved.
+
+    Returns:
+        None (creates a folder "zenodo_pdfs" that stores the PDFs from the Cache File)
+    """
+    
+    df = load_full_hf_cache(repo_name=repo_name)
+
+    os.makedirs(save_dir, exist_ok=True)
+    pdf_names = set()
+
+    for _, row in tqdm(df.iterrows(), total=len(df), desc="Downloading PDFs"):
+        record_id = row["zenodo_record_id"]
+        pdf_filename = row["zenodo_filename"]
+        pdf_path = os.path.join(save_dir, pdf_filename)
+
+        if os.path.exists(pdf_path) or pdf_filename in pdf_names:
+            continue
+
+        # Get list of available PDFs for this record
+        pdf_files = get_zenodo_pdfs(record_id)
+        pdf_file = next((file for file in pdf_files if file["key"] == pdf_filename), None)
+
+        if not pdf_file:
+            print(f"PDF {pdf_filename} not found in record {record_id}")
+            continue
+
+        try:
+            response = requests.get(pdf_file["links"]["self"], stream=True)
+            response.raise_for_status()
+
+            with open(pdf_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            print(f"Downloaded {pdf_filename}")
+            pdf_names.add(pdf_filename)
+
+        except Exception as e:
+            print(f"Error downloading {pdf_filename}: {e}")
+
+    print("All PDFs downloaded!")
 
 
 
