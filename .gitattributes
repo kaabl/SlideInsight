@@ -1,0 +1,4 @@
+.byaldi/**/*.pt filter=lfs diff=lfs merge=lfs -text
+.byaldi/**/*.json.gz filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.json.gz filter=lfs diff=lfs merge=lfs -text
