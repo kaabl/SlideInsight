@@ -2,7 +2,7 @@
 
 This repository contains a collection of notebooks for gaining insights into presentation slides collected in the [NFDI4BIOIMAGE Training Material](https://nfdi4bioimage.github.io/training/readme.html) through multimodal AI models. Some goals are:
 
-## 1. Explore different multimodal Models and use Slide Embeddings to gain insights about contents
+## 1. Explore different multimodal models and use slide embeddings to gain insights about contents
 - [Comparison of different models](Test_Models.ipynb) and their performance on summarizing the content of presentation slides. This is not implemented through text-to-text models but rather through image-to-text (multimodal) models. As a first test pdf I3D:bio's Training Material ['WhatIsOMERO.pdf'](https://doi.org/10.5281/zenodo.8323588) (Schmidt, C., Bortolomeazzi, M. et al., 2023) is used.
 
 - Improve our understanding about [how different types of embeddings represent the same content](Inspect_Embeddings/Compare_distorted_Embeddings.ipynb). For this task, some presentation slides are adapted to see whether text, visual or mixed-modal embeddings perform comparably well in representating a slides features, when the slide is changed in a specific manner. For this, slides are adapted from the Bio-image Data Science Lectures.
