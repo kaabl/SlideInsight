@@ -533,8 +533,7 @@ def download_all_pdfs(repo_name = "ScaDS-AI/SlideInsight_Cache", save_dir="zenod
     print("All PDFs downloaded!")
 
 
-
-def download_zenodo_pdf(zenodo_record_id, pdf_number=1, save_dir="downloaded_pdfs"):
+def download_zenodo_pdf(zenodo_record_id, pdf_number=1, save_dir=None):
     """
     Downloads a specific PDF from a Zenodo record and saves it locally.
 
@@ -545,7 +544,7 @@ def download_zenodo_pdf(zenodo_record_id, pdf_number=1, save_dir="downloaded_pdf
     pdf_number : int, optional
         The number of the PDF to download (1-based index).
     save_dir : str, optional
-        Directory where the PDF will be saved.
+        Directory where the PDF will be saved. If not provided, the PDF is saved in the current directory.
 
     Returns:
     --------
@@ -553,6 +552,14 @@ def download_zenodo_pdf(zenodo_record_id, pdf_number=1, save_dir="downloaded_pdf
     """
     import os
     import requests
+
+    # If save_dir is provided, create the directory if it doesn't exist
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = os.path.join(save_dir, f"zenodo_{zenodo_record_id}_pdf{pdf_number}.pdf")
+    else:
+        # If save_dir is not provided, save in the current working directory
+        save_path = f"zenodo_{zenodo_record_id}_pdf{pdf_number}.pdf"
 
     # Fetch list of PDFs from Zenodo
     pdf_files = get_zenodo_pdfs(zenodo_record_id)
@@ -565,20 +572,16 @@ def download_zenodo_pdf(zenodo_record_id, pdf_number=1, save_dir="downloaded_pdf
 
     # Get the selected PDF file
     pdf_url = pdf_files[pdf_number - 1]["links"]["self"]
-    pdf_filename = (f"zenodo_{zenodo_record_id}_pdf{pdf_number}.pdf")
 
     # Download and save PDF
     response = requests.get(pdf_url)
     if response.status_code == 200:
-        with open(pdf_filename, "wb") as f:
+        with open(save_path, "wb") as f:
             f.write(response.content)
-        print(f" Downloaded PDF saved at: {pdf_filename}")
-        return pdf_filename
+        print(f"Downloaded PDF saved at: {save_path}")
+        return save_path
     else:
         raise ValueError(f"Failed to download PDF (Status Code: {response.status_code})")
-
-
-
 
 
 
