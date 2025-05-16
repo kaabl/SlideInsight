@@ -534,7 +534,48 @@ def download_all_pdfs(repo_name = "ScaDS-AI/SlideInsight_Cache", save_dir="zenod
 
 
 
+def download_zenodo_pdf(zenodo_record_id, pdf_number=1, save_dir="downloaded_pdfs"):
+    """
+    Downloads a specific PDF from a Zenodo record and saves it locally.
 
+    Parameters:
+    ----------
+    zenodo_record_id : str
+        Zenodo record ID to fetch PDFs from.
+    pdf_number : int, optional
+        The number of the PDF to download (1-based index).
+    save_dir : str, optional
+        Directory where the PDF will be saved.
+
+    Returns:
+    --------
+    str : Path to the downloaded PDF file.
+    """
+    import os
+    import requests
+
+    # Fetch list of PDFs from Zenodo
+    pdf_files = get_zenodo_pdfs(zenodo_record_id)
+    if not pdf_files:
+        raise ValueError(f"No PDFs found for Zenodo record {zenodo_record_id}")
+
+    # Ensure the requested PDF exists
+    if pdf_number > len(pdf_files):
+        raise ValueError(f"Requested PDF {pdf_number} not available, only {len(pdf_files)} found.")
+
+    # Get the selected PDF file
+    pdf_url = pdf_files[pdf_number - 1]["links"]["self"]
+    pdf_filename = (f"zenodo_{zenodo_record_id}_pdf{pdf_number}.pdf")
+
+    # Download and save PDF
+    response = requests.get(pdf_url)
+    if response.status_code == 200:
+        with open(pdf_filename, "wb") as f:
+            f.write(response.content)
+        print(f" Downloaded PDF saved at: {pdf_filename}")
+        return pdf_filename
+    else:
+        raise ValueError(f"Failed to download PDF (Status Code: {response.status_code})")
 
 
 
