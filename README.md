@@ -18,6 +18,8 @@ This repository contains a collection of notebooks for gaining insights into pre
 
 - The two different approaches were compared against each other, as seen in the [corresponding Notebook](RAG/Compare_RAG_approaches.ipynb). To further evaluate their performance on the desired task, a [simple Benchmark](RAG/Benchmark_Byaldi_CLIP.ipynb) was created.
 
+
+## Github Models
 To access the AI models used in this repository, this [free Service from Github](https://github.com/marketplace/models) is used.
 
 ***Be aware that there are certain [rate limits](https://docs.github.com/en/github-models/prototyping-with-ai-models#rate-limits) for each model!***
