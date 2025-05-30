@@ -12,15 +12,13 @@ Outputs are going to be unlabeled, in terms of the used approach, to prevent int
 
 """
 
-
 import sys
-import os
-
+import os 
 # Add parent directory to be able to import modules / files
 parent_dir = os.path.abspath(os.path.join(os.getcwd(), ".."))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
-        
+       
 import pandas as pd
 from natsort import natsorted
 from caching import load_full_hf_cache, get_zenodo_pdfs
@@ -39,7 +37,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import gc
 
 def search_via_byaldi(query, k_results, docs_retrieval_model):
-
+    
     # Retrieve k best results
     results = docs_retrieval_model.search(query, k=k_results)
     
