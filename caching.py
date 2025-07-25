@@ -367,9 +367,10 @@ def extract_zenodo_ids(url_list):
                 zenodo_ids.append(match.group(1))
                 
     return sorted(zenodo_ids)
-    
+
+
 # Load YAML file and extract Zenodo record IDs correctly
-def get_zenodo_ids_from_yaml(yaml_file):
+def get_zenodo_ids_from_yaml(yaml_file, valid_licenses, unclear_licenses):
     with open(yaml_file, "r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
 
@@ -382,13 +383,20 @@ def get_zenodo_ids_from_yaml(yaml_file):
             if isinstance(entry_type, str):
                 entry_type = [entry_type]  # Convert single string to a list
         
-            # Check if 'Slides' is in the type list
+            # Check if 'Slides' is in the type list and if entry has a license
             if "Slides" in entry_type:
-                zenodo_ids.extend(extract_zenodo_ids(entry["url"]))  # Extract IDs safely
+                license = entry.get("license")
+                if license:
+                    license_lower = license.lower()  # normalize case
+                    if (license_lower in [l.lower() for l in valid_licenses]) or \
+                       (license_lower in [l.lower() for l in unclear_licenses]):
+                        zenodo_ids.extend(extract_zenodo_ids(entry["url"]))
+                        
     sorted_ids = sorted(zenodo_ids)
    
     return sorted_ids
-    
+
+
 # Function to fetch Zenodo record files (PDFs)
 def get_zenodo_pdfs(record_id):
     api_url = f"https://zenodo.org/api/records/{record_id}"
@@ -407,6 +415,7 @@ def get_zenodo_pdfs(record_id):
 
     return pdf_files
 
+
 # Function to download a PDF file from Zenodo
 def download_pdf(pdf_url):
     response = requests.get(pdf_url)
@@ -415,6 +424,7 @@ def download_pdf(pdf_url):
     else:
         print(f"Failed to download PDF: {pdf_url}")
         return None
+
 
 # Main function to process each slide and store embeddings with metadata
 def cache_hf(zenodo_record_id, token, use_openai, repo_name="ScaDS-AI/SlightInsight_Cache"):
