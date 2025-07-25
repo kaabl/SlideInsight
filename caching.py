@@ -19,7 +19,7 @@ from azure.core.credentials import AzureKeyCredential
 from PIL import Image
 from pdf2image import convert_from_path
 import base64
-from datasets import Dataset, DatasetDict, concatenate_datasets, Features, Image, load_dataset, Value, Sequence
+from datasets import Dataset, DatasetDict, concatenate_datasets, Features, Image, load_dataset, Value, Sequence, load_dataset
 import tempfile
 import requests
 import shutil
@@ -28,7 +28,7 @@ from io import BytesIO
 import yaml
 import re
 from pdf2image import convert_from_bytes
-
+import pandas as pd
 
 # Initialize models
 text_model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
@@ -65,13 +65,14 @@ def load_cache_dataset(repo_name):
         return load_dataset(repo_name, split="train")
     except Exception:
         # If it doesn't exist, create a new dataset
-        return Dataset.from_dict({"key": [], "text": [], "visual": [], "mixed": [], "image": []})
+        return Dataset.from_dict({"key": [], "text_embedding": [], "visual_embedding": [], "mixed_embedding": [], "image": []})
+
 
 # Embedding functions
-def embed_text(pdf_filename, slide_number, text_model):
+def embed_and_extract_text(pdf_filename, slide_number, text_model):
     with pdfplumber.open(pdf_filename) as pdf:
         text = pdf.pages[slide_number].extract_text() or ""
-        return text_model.encode(text)
+        return text_model.encode(text), text
 
 
 def embed_visual(pdf_filename, slide_number, clip_processor, clip_model):
@@ -180,7 +181,7 @@ def caching_local(pdf_path):
             # Check and compute missing values
             if "text" not in cached_data:
                 print(f"Generating text embedding for Slide {slide_number}")
-                cached_data["text"] = embed_text(pdf_path, slide_number, text_model)
+                cached_data["text"],_ = embed_and_extract_text(pdf_path, slide_number, text_model)
                 updated = True
 
             if "visual" not in cached_data:
@@ -248,7 +249,7 @@ def load_local_cache(pdf_path, slide_number):
             return None
 
 
-def load_single_hf_cache(record_id, slide_number, pdf_number = 1, repo_name="ScaDS-AI/SlightInsight_Cache"):
+def load_single_hf_cache_OLD(record_id, slide_number, pdf_number = 1, repo_name="ScaDS-AI/SlightInsight_Cache"):
     """
     Loads embeddings and metadata from the Hugging Face cache for a single slide.
 
@@ -265,9 +266,10 @@ def load_single_hf_cache(record_id, slide_number, pdf_number = 1, repo_name="Sca
     -------
     dict or None
         A dictionary containing:
-        - "text": Text embedding
-        - "visual": Visual embedding
-        - "mixed": Mixed embedding
+        - "text_embedding": Text embedding
+        - "visual_embedding": Visual embedding
+        - "mixed_embedding": Mixed embedding
+        - "extracted_text": Text that got extracted from current Slide
         - "zenodo_record_id": Zenodo record ID
         - "zenodo_filename": Original Zenodo file name
         - "page_number": Slide number
@@ -287,9 +289,10 @@ def load_single_hf_cache(record_id, slide_number, pdf_number = 1, repo_name="Sca
         if cached_key == key:
             cached_data = {
                 "key": cache_dataset["key"][idx],
-                "text": cache_dataset["text"][idx],
-                "visual": cache_dataset["visual"][idx],
-                "mixed": cache_dataset["mixed"][idx],
+                "text_embedding": cache_dataset["text_embedding"][idx],
+                "visual_embedding": cache_dataset["visual_embedding"][idx],
+                "mixed_embedding": cache_dataset["mixed_embedding"][idx],
+                "extracted_text": extracted_text["extracted_text"][idx],
                 "zenodo_record_id": cache_dataset["zenodo_record_id"][idx], 
                 "zenodo_filename": cache_dataset["zenodo_filename"][idx], 
                 "page_number": cache_dataset["page_number"][idx]
@@ -302,30 +305,56 @@ def load_single_hf_cache(record_id, slide_number, pdf_number = 1, repo_name="Sca
 
 
 
-def load_full_hf_cache(repo_name="ScaDS-AI/SlightInsight_Cache"):
+def load_single_hf_cache(record_id, slide_number, pdf_number=1, parquet_path="hf://datasets/ScaDS-AI/SlideInsight_Cache/data/train-00000-of-00001.parquet"):
     """
-    Loads the entire dataset from the Hugging Face cache.
+    Loads a single row from the Hugging Face cache as a Pandas DataFrame.
 
     Parameters
     ----------
-    repo_name : str, optional
-        Name of the Hugging Face Hub dataset repository.
+    record_id : str
+        The Zenodo record ID.
+    slide_number : int
+        The slide number to retrieve.
+    pdf_number : int, optional
+        The PDF number, defaults to 1.
+    parquet_path : str
+        Path to the .parquet file on the Hugging Face Hub.
 
     Returns
     -------
-    pandas.DataFrame or None
-        A DataFrame containing all cached data.
-        Returns None if loading fails.
+    pd.DataFrame or None
+        A single-row DataFrame with the matched cache entry.
+        Returns None if no match is found.
     """
-
-    # Load dataset from Hugging Face Hub
     try:
-        cache_dataset = load_dataset(repo_name, split="train")
-        df = cache_dataset.to_pandas()  
-        return df
+        df = pd.read_parquet(parquet_path)
     except Exception as e:
         print(f"Error loading dataset: {e}")
         return None
+
+    key = f"record{record_id}_pdf{pdf_number}_slide{slide_number}"
+    match = df[df["key"] == key]
+
+    if match.empty:
+        print(f"No cached data found for {key}")
+        return None
+
+    return match.reset_index(drop=True)
+
+
+
+
+def load_full_hf_cache(repo_name="ScaDS-AI/SlightInsight_Cache"):
+    """
+    Loads the entire dataset from the Hugging Face cache.
+    Function has to be adapted, but it works right now.
+    """
+    import pandas as pd
+
+    # Login using e.g. `huggingface-cli login` to access this dataset
+    df = pd.read_parquet("hf://datasets/ScaDS-AI/SlideInsight_Cache/data/train-00000-of-00001.parquet")
+
+    return df
 
 
 
@@ -492,7 +521,7 @@ def cache_hf(zenodo_record_id, token, use_openai, repo_name="ScaDS-AI/SlightInsi
             slide_number = i + 1
             slide_key = f"record{zenodo_record_id}_pdf{pdf_number + 1}_slide{slide_number}"
 
-            text_embedding = embed_text(pdf_bytes, i, text_model)
+            text_embedding, extracted_text = embed_and_extract_text(pdf_bytes, i, text_model)
             visual_embedding = embed_visual(pdf_bytes, i, clip_processor, clip_model)
 
             page_image = slide.to_image().original  # Convert to PIL Image
@@ -504,9 +533,10 @@ def cache_hf(zenodo_record_id, token, use_openai, repo_name="ScaDS-AI/SlightInsi
                 "zenodo_record_id": zenodo_record_id,
                 "zenodo_filename": pdf_filename,
                 "page_number": slide_number,
-                "text": text_embedding,
-                "visual": visual_embedding,
-                "mixed": mixed_embedding
+                "text_embedding": text_embedding,
+                "visual_embedding": visual_embedding,
+                "mixed_embedding": mixed_embedding,
+                "extracted_text": extracted_text,                
             })
             
         cache_dataset = append_rows_to_dataset(cache_dataset, new_data)
