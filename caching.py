@@ -29,6 +29,7 @@ import yaml
 import re
 from pdf2image import convert_from_bytes
 import pandas as pd
+import time
 
 # Initialize models
 text_model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
@@ -427,12 +428,14 @@ def get_zenodo_ids_from_yaml(yaml_file, valid_licenses, unclear_licenses):
 
 
 # Function to fetch Zenodo record files (PDFs)
-def get_zenodo_pdfs(record_id):
+def get_zenodo_pdfs(record_id, wait_time=1.0):
     api_url = f"https://zenodo.org/api/records/{record_id}"
     response = requests.get(api_url)
+    time.sleep(wait_time)  # wait after each request to avoid rate limiting
+
 
     if response.status_code != 200:
-        print(f"Failed to fetch Zenodo record {record_id}, skipping...")
+        print(f"Failed to fetch Zenodo record {record_id} due to code {response.status_code}, skipping...")
         return []
 
     record_data = response.json()
