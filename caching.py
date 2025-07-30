@@ -458,6 +458,22 @@ def download_pdf(pdf_url):
         return None
 
 
+# Function to check if a PDF is in landscape orientation. This means it is likely a presentation.
+def is_landscape_pdf(pdf_url):
+    """ 
+    Checks if a PDF is in landscape orientation using only the first page.
+    """
+    try:
+        response = requests.get(pdf_url)
+        if response.status_code != 200:
+            return None
+        with pdfplumber.open(BytesIO(response.content)) as pdf:
+            first_page = pdf.pages[0]
+            return first_page.width > first_page.height
+    except Exception:
+        return None
+
+
 # Main function to process each slide and store embeddings with metadata
 def cache_hf(zenodo_record_id, token, use_openai, repo_name="ScaDS-AI/SlightInsight_Cache"):
     """
